@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Data User</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-header">Data User</div>
+                    <div class="card-body">
+                        <div class="mb-3" align="right">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">Tambah Pengguna</button>
+                        </div>
+                        <table class="table table-bordered" id="userTable">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Nama</th>
+                                    <th>Email</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Button trigger modal -->
+
+
+<!-- Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+        <form action="" method="post" id="addUserForm">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="exampleModalLabel">Tambah Pengguna</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="" class="form-label">Nama</label>
+                <input type="text" class="form-control" id="name" placeholder="Masukkan Nama Anda" required>
+                <div id="errorName" class="text-danger small mt-1"></div>
+              </div>
+              <div class="mb-3">
+                <label for="" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" placeholder="Masukkan Email Anda" required>
+                <div id="errorEmail" class="text-danger small mt-1"></div>
+              </div>
+              <div class="mb-3">
+                <label for="" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="Masukkan Password Anda" required>
+                <div id="errorPassword" class="text-danger small mt-1"></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+        </form>
+    </div>
+  </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+
+  <script>
+      async function fetchUser(){
+          try {
+              const response = await fetch('http://localhost:8000/api/user');
+              const result = await response.json();
+              console.log(result);
+  
+              const userTable = document.querySelector('#userTable tbody');
+              userTable.innerHTML='';
+              
+              result.data.forEach(function(user, index){
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `
+                      <td>${(index += 1)}</td>
+                      <td>${user.name}</td>
+                      <td>${user.email}</td>
+                      <td>
+                          <button class='btn btn-sm btn-warning'>Edit</button>
+                          <button class='btn btn-sm btn-danger' onclick='deleteUser(${user.id})'>Delete</button>
+                      </td>
+                  `;
+                  userTable.appendChild(tr);
+              });
+  
+          } catch (error) {
+              console.log("error fetch user:", error);
+              alert("Gagal mengambil data user");
+          }
+      }
+
+      const userModal = new bootstrap.Modal(document.getElementById('userModal'));
+      const addUserForm = document.querySelector('#addUserForm');
+      addUserForm.addEventListener("submit", async function(e){
+        e.preventDefault();
+        const name = document.getElementById("name").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        try {
+            const response = await fetch("http://localhost:8000/api/user", {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                },
+
+                body:JSON.stringify({
+                    name, email, password,
+                })
+            });
+
+            const result = await response.json();
+            console.log(response);
+
+            if(response.ok){
+                alert(result.message);
+                userModal.hide();
+                // document.getElementById('addUserForm').reset(); --> bisa juga pake yg bawah v
+                addUserForm.reset();
+                fetchUser();
+            }else if(response.status === 422){
+                const errors = result.errors;
+                if(errors.name){
+                    document.getElementById("errorName").innerText = errors.name[0];
+                }
+                if(errors.email){
+                    document.getElementById("errorEmail").innerText = errors.email[0];
+                }
+                if(errors.password){
+                    document.getElementById("errorPassword").innerText = errors.password[0];
+                }
+            }else{
+                alert("Gagal tambah user");
+            }
+        } catch (error) {
+            alert("Terjadi kesalahan");
+            console.log("Terjadi kesalahan", error);
+        }
+      });
+
+      async function deleteUser(id){
+        const confirmBox = confirm("Apakah anda yakin akan menghapus data ini??");
+        if(!confirmBox)return;
+
+        try {
+            const response = await fetch(`http://localhost:8000/api/user/${id}`, {
+                method:'DELETE',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+            });
+
+            const result = await response.json();
+            if(result.status == 'success'){
+                alert("Data berhasil dihapus");
+                fetchUser();
+            }else{
+                alert(result.message);
+            }
+        } catch (error) {
+            console.log('Error pada saat delete', error);
+            alert("Error delete user");
+        }
+      }
+
+      fetchUser();
+  </script>
+
+  </body>
+</html>
