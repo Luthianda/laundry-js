@@ -76,8 +76,13 @@
 
   <script>
       async function fetchUser(){
+        const token = localStorage.getItem("token");
           try {
-              const response = await fetch('http://localhost:8000/api/user');
+              const response = await fetch('http://localhost:8000/api/user',{
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+              });
               const result = await response.json();
               console.log(result);
   
